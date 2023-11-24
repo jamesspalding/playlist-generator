@@ -7,5 +7,15 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+```{r}
+#Step 1: clean data
+
+songs = read.csv("spotify_songs.csv") 
+songs = distinct(songs, track_id, .keep_all = T) %>% #removing duplicate songs
+  select(c(-track_album_id, -track_album_name, #removing album info
+           -playlist_name, -playlist_id)) #removing playlist info
 ```
 
