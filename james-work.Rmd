@@ -16,6 +16,7 @@ library(tidyverse)
 songs = read.csv("spotify_songs.csv") 
 songs = distinct(songs, track_id, .keep_all = T) %>% #removing duplicate songs
   select(c(-track_album_id, -track_album_name, #removing album info
-           -playlist_name, -playlist_id)) #removing playlist info
+           -playlist_name, -playlist_id, #removing playlist info
+           -mode, -duration_ms)) #removing unnecessary info
 ```
 
