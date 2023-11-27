@@ -19,4 +19,16 @@ https://www.kaggle.com/datasets/joebeachcapital/30000-spotify-songs
 3. Partition groups into smaller sub-groups based on factors such as tempo and danceability
 4. Use a random number generator to create unique playlists
 
-*Detail steps taken here*
+**1. Data Cleaning**
+
+Cleaning data was simple, only requiring a few lines of code and dplyer. I removed duplicate tracks and unnecessary columns (album and playlist information) from the dataset to prepare for analysis.
+
+```
+library(tidyverse)
+songs = read.csv("spotify_songs.csv") 
+songs = distinct(songs, track_id, .keep_all = T) %>% #removing duplicate songs
+  select(c(-track_album_id, -track_album_name, #removing album info
+           -playlist_name, -playlist_id)) #removing playlist info
+```
+
+**2. Factor Grouping**
