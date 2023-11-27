@@ -31,4 +31,4 @@ songs = distinct(songs, track_id, .keep_all = T) %>% #removing duplicate songs
            -playlist_name, -playlist_id)) #removing playlist info
 ```
 
-**2. Factor Grouping**
+**2. Factor Grouping** 
