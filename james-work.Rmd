@@ -8,6 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+attach(songs)
 ```
 
 ```{r}
@@ -19,4 +20,70 @@ songs = distinct(songs, track_id, .keep_all = T) %>% #removing duplicate songs
            -playlist_name, -playlist_id, #removing playlist info
            -mode, -duration_ms)) #removing unnecessary info
 ```
+
+```{r}
+#plotting regression
+factorAvg = rowMeans(songs[8:17])
+
+lm(track_popularity~as.factor(playlist_genre)+instrumentalness+energy+loudness+danceability+acousticness+liveness+tempo+valence)
+
+ggplot(songs, aes(instrumentalness, track_popularity, color = playlist_genre))+
+  geom_point()+
+  geom_abline()
+
+
+```
+
+```{r}
+songs2 = songs %>%
+  select(track_popularity, 8:17) #using only numeric values
+
+songPC = princomp(songs2, cor = T)
+summary(songPC, loadings = T) #only 33.66% explained with 2 comps
+
+library(ggfortify)
+autoplot(songPC, loadings=T, loadings.label=T, data = songs2) #looks kind of nice?
+```
+
+
+
+
+
+-------------------------------------
+
+
+
+
+
+# Playlist Generation
+
+```{r}
+#Idea: Since popularity is likeness of the masses, we can use regression line to predict most "popular" song that relates to the original song.
+
+playlist.create = function(givenID, n = 1){ #Takes track_id as string and desired playlist length n (integer)
+  #initialize song selection
+  givenSong = songs %>%
+    filter(track_id == givenID) #selects all data on selected song
+  
+  #Error handling
+  if((n%%1==0) == F){ #Checks that n is an integer
+    return("Please enter valid playlist length.")
+  }
+  if(nrow(givenSong) == 0){
+    return("Song not found.")
+  }
+  
+  
+  print(givenSong)
+}
+playlist.create("6f807x0ima9a1j3VPbc7VN", 5)
+playlist.create("hi", 1.1)
+playlist.create("hi", 5)
+
+```
+
+
+
+
+
 
