@@ -102,7 +102,7 @@ This process is repeated a total of 10 times to result in the following model to
 
 $$\widehat{Popularity} = (46.84327861+Genre_I) - 7.33963458(Instrumentalness) - 20.96812717(Energy) + 1.44788261(Loudness) + 13.68405666(Danceability) + 6.28231307(Acousticness) - 4.12188004(Liveness) + 0.02403758(Tempo) - 2.32546662(Valence)$$
 
-With categorical variable $genre_I$ where $I$ has the following properties:
+With categorical variable $genre_I$ where $I$ represents the follwing genres:
 
 * Pop = 12.395
 * Rock = 10.383
