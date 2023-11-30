@@ -60,7 +60,7 @@ autoplot(songPC, loadings=T, loadings.label=T, data = songs2) #looks kind of nic
 ```{r}
 #Idea: Since popularity is likeness of the masses, we can use regression line to predict most "popular" song that relates to the original song.
 
-playlist.create = function(givenID, n = 1){ #Takes track_id as string and desired playlist length n (integer)
+playlist.create = function(givenID, n = 1){ #Takes track_id as string and desired playlist length int n
   #initialize song selection
   givenSong = songs %>%
     filter(track_id == givenID) #selects all data on selected song
@@ -69,19 +69,62 @@ playlist.create = function(givenID, n = 1){ #Takes track_id as string and desire
   if((n%%1==0) == F){ #Checks that n is an integer
     return("Please enter valid playlist length.")
   }
-  if(nrow(givenSong) == 0){
+  if(nrow(givenSong) == 0){ #check that song is on list
     return("Song not found.")
   }
   
+  #Picking best song
+  #Idea: using the regression model, we can identify the most important factors. We can search using a series of t-tests to narrow down to the "best" song
   
-  print(givenSong)
-}
-playlist.create("6f807x0ima9a1j3VPbc7VN", 5)
-playlist.create("hi", 1.1)
-playlist.create("hi", 5)
+#-----X1: Genre-----#  
+  genreDF = songs %>% #genre is the most important factor, so it will go first.
+    filter(playlist_genre == givenSong$playlist_genre)
+  
+print(nrow(genreDF))
+    
+#-----X2: Instrumentalness-----#
+  similarity = data.frame(sim = numeric(nrow(genreDF)))
+  for(i in 1:nrow(similarity)){
+    similarity[i,] = abs(givenSong[1,14] - genreDF[i,14])
+  }
+  
+  tempDF = cbind(genreDF, similarity) %>% #selecting songs with bottom 50% closest
+    filter(sim < quantile(similarity[,1])[3]) %>%
+    select(-sim) #removing temp sim
+  
+print(nrow(tempDF))
 
+#-----X3-X9: Everything Else-----#  
+  variableIndex = c(9, 11, 8, 13, 15, 17, 16) #energy, loudness, danceability, acousticness, liveness, tempo, valence
+  for(x in variableIndex){ #loop through remaining variables
+    similarity = data.frame(sim = numeric(nrow(tempDF))) 
+    for(i in 1:nrow(similarity)){
+      similarity[i,] = abs(givenSong[1,x] - tempDF[i,x])
+    }
+    
+    tempDF = cbind(tempDF, similarity) %>% #selecting songs with bottom 50% closest
+      filter(sim < quantile(similarity[,1])[3]) %>%
+      select(-sim) #removing temp sim
+  }
+  
+#-----Final Selection-----#   
+  print(tempDF[sample(1:nrow(tempDF), 1),]) #using a random number in order to obtain unique playlists.
+
+}
+
+
+playlist.create("3YBZIN3rekqsKxbJc9FZko", 5)
 ```
 
+
+```{r}
+  pvals = vector("list", length = 5)
+  for(i in 1:5){
+    pvals[i] = as.numeric(t.test(songs[1,8:17], songs[i+1,8:17])[3]) #populating list
+  }
+min(as.numeric(pvals))
+distinct(as.numeric(pvals))
+```
 
 
 
