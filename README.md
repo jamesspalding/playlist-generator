@@ -110,3 +110,78 @@ With categorical variable $genre_I$ where $I$ represents the follwing genres:
 * Latin = 6.761
 * R&B = 2.308
 * EDM = 0
+
+## 3. Playlist Function
+
+The goal of the function is to use the above regression line to narrow down a huge list of songs into a short list of "best" songs using the most important variables determined by the regression line.
+
+My initial plan was to use a series of T-Tests to determine song similarity, but I was not able to do it by variable, so I used *literal* difference as the deciding factor. Where $S_{gx_i}$ is a given song's $X_i$ value, $S_{cx_i}$ is a chosen song's $X_i$ value, and $Sim$ is the similarity:
+
+$$Sim = \mid S_{gx_i} - S_{cx_i} \mid$$
+
+Therefore, the smaller $Sim$ is, the more similar the variable in $S_c$ is to the variable in $S_g$.
+
+Before starting, I initialized the repetition variable and playlist dataframe.
+
+```
+playList = songs %>%
+   filter(track_id == givenID) #selects all data on selected song
+r = 1 #used for repetition
+while(r < n){ 
+   #initialize song selection
+   givenSong = playList[r,]
+```
+
+As genre($X_1$) was found to be the most important variable in determining song popularity, it was the first filter I used.
+
+```
+genreDF = songs %>% 
+   filter(playlist_genre == givenSong$playlist_genre) %>%
+   filter(!track_id %in% playList$track_id) 
+```
+
+For instrumentalness, I ran into a problem with songs with an instrumentalness value of 0, which lead me to use an if statement to select only said songs in the case that the given song has a 0 instrumentalness value. In the case that instrumentalness $\not = 0$, I used the quantile() function to select only the songs within the smallest 50% of values.
+
+```
+if(givenSong[1,14] == 0){ #Needed if/else statements to avoid an error
+      tempDF = genreDF %>%
+        filter(genreDF[,14] == 0)
+    }   
+else{
+      similarity = data.frame(sim = numeric(nrow(genreDF)))
+      for(i in 1:nrow(similarity)){
+        similarity[i,] = abs(givenSong[1,14] - genreDF[i,14])
+      }   
+      
+      tempDF = cbind(genreDF, similarity) %>% #selecting songs with bottom 50% closest
+        filter(sim < quantile(similarity[,1])[3]) %>%
+        select(-sim) #removing temp sim
+   }
+```
+
+I was then able to generalize the rest of the variables using a for loop and a list of the variables, referenced by index.
+
+```
+variableIndex = c(9, 11, 8, 13, 15, 17, 16) #energy, loudness, danceability, acousticness, liveness, tempo, valence
+for(x in variableIndex){ #loop through remaining variables
+   similarity = data.frame(sim = numeric(nrow(tempDF))) 
+   for(i in 1:nrow(similarity)){
+      similarity[i,] = abs(givenSong[1,x] - tempDF[i,x])
+   }
+      
+   tempDF = cbind(tempDF, similarity) %>% #selecting songs with bottom 50% closest
+      filter(sim < quantile(similarity[,1])[3]) %>%
+      select(-sim) #removing temp sim
+}
+```
+
+Finally, I used a random number generator to select from the short list of "best" songs, and used the repetition variable to add it to the playlist dataframe.
+
+```
+    playList[r+1,] = tempDF[sample(1:nrow(tempDF), 1),] #using a random number in order to obtain unique playlists.
+    r = r+1 #iteration
+  }
+  
+  return(playList)
+}
+```
