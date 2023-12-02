@@ -60,10 +60,23 @@ autoplot(songPC, loadings=T, loadings.label=T, data = songs2) #looks kind of nic
 ```{r}
 #Idea: Since popularity is likeness of the masses, we can use regression line to predict most "popular" song that relates to the original song.
 
-playlist.create = function(givenID, n = 1){ #Takes track_id as string and desired playlist length int n
+playlist.create = function(givenID, n = 1, en = T, fullData = F, export = F, name = "playlist"){ #Takes track_id as string and desired playlist length int n
   playList = songs %>%
     filter(track_id == givenID) #selects all data on selected song
   r = 1 #used for repetition
+  
+#----------Language----------#   
+# The function assumes English-only, unless specified genre is Latin.
+  
+  if(playList$playlist_genre[1] == "latin"){ #Making english-only exception for latin genre
+    en = F
+  }
+  if(en == T){ #removes songs containing letters outside the english alphabet; isn't perfect, but better than none. 1300 songs removed
+    songs = songs %>% 
+      mutate(track_name = iconv(track_name, from = "latin1", to = "ASCII")) %>%
+      filter(!is.na(track_name))
+  }
+  
   while(r < n){
     
     #initialize song selection
@@ -78,13 +91,13 @@ playlist.create = function(givenID, n = 1){ #Takes track_id as string and desire
     }
     
 #----------Choosing Song----------#  
-    #Idea: using the regression model, we can identify the most important factors. We can find the most similar of each category and use a random number generator on the most similar.
+# Idea: using the regression model, we can identify the most important factors. We can find the most similar of each category and use a random number generator on the most similar.
     
 #-----X1: Genre-----#  
     genreDF = songs %>% #genre is the most important factor, so it will go first.
       filter(playlist_genre == givenSong$playlist_genre) %>%
       filter(!track_id %in% playList$track_id) #removing any prior song
-      
+    
 #-----X2: Instrumentalness-----#
     if(givenSong[1,14] == 0){ #Needed if/else statements to avoid an error
       tempDF = genreDF %>%
@@ -119,13 +132,30 @@ playlist.create = function(givenID, n = 1){ #Takes track_id as string and desire
     r = r+1 #iteration
   }
   
-  return(playList)
+#-----Output-----#  
+  if(export == T){ #exports playlist to csv
+    write.csv(data.frame(song = playList$track_name, artist = playList$track_artist), paste0(name,".csv"), row.names = F)
+    return(cat("Playlist generated as ", name))
+  }
+  if(fullData == F){ #only returns track/artist
+    return(data.frame(song = playList$track_name, artist = playList$track_artist))
+  }else{
+    return(playList)
+  }
 }
 
-
-playlist.create("3YBZIN3rekqsKxbJc9FZko", 20)
 ```
 
+```{r}
+#demo
+playlist.create("7wBJfHzpfI3032CSD7CE2m", 20) #playlist - short
+playlist.create("7wBJfHzpfI3032CSD7CE2m", 20, fullData = T) #playlist - full
+
+
+#Export
+#https://www.tunemymusic.com/transfer/csv-to-spotify
+playlist.create("Insert Song ID", 20, export = T, name = "Output name")
+```
 
 
 
