@@ -2,38 +2,31 @@
 
 https://www.kaggle.com/datasets/joebeachcapital/30000-spotify-songs
 
-### Goal: Build a regression model that predicts song popularity based off of a variety of variables. Then use this model to create a function that takes a song as input and outputs a playlist of similar music.
+### An R function that uses linear regression to generate Spotify playlists. 
 
-### <ins> Process </ins>
-**Regression Model:**
-* Determine which factors are significant or can be dropped for song popularity using stepwise selection
-* Plot findings with regression lines colored by genre
-* Search for other possible groupings or correlation between 
+## <ins> Usage </ins>
 
-**Playlist Function:**
-* Input track_id and desired playlist length n
-* Search through dataset for track (If not found, returns error)
-* Filter out songs outside of specefied genre(s)
-* Use T-Test to find similar songs
-* Use a random number generator to select one of the found songs, weighted by popularity
-* Return track_id and track_title
-* Using output, repeat process n-1 times until playlist of desired lengeth has been created
+```
+playlist.create(givenID, n = 1, en = T, fullData = F, export = F, name = "playlist")
+```
 
-### <ins> Steps </ins> 
+The **playlist.create** function takes the following parameters:
 
-Regression Model:
 
-1. Clean data
-2. Find significant factors in determining popularity
-3. Create regression model to predict popularity based off significant variables found in step 2
+* givenID: Spotify songID of a song you wish to generate a playlist based off of
+* n: desired length of playlist, default value = 1
+* en: eliminate songs containing letters outside of the English alphabet, default value = TRUE
+* fullData: return all song data of playlist songs, default value = FALSE
+* export: export playlist as .csv file, default value = FALSE
+* name: name of exported .csv file, default = "playlist" 
 
-Playlist Function:
+An exported .csv file can be input into the following website to export directly to any music streaming service:
 
-1. Use T-test to find list of significantly similar songs
-2. Use the popularity regression to predict the likeness of the songs in the list
-3. Repeat on specified length of playlist
+https://www.tunemymusic.com/transfer/csv-to-spotify
+
+## <ins> Process </ins>
    
-## 1. Data Cleaning
+### 1. Data Cleaning
 
 Cleaning data was simple, only requiring a few lines of code and dplyer. I removed duplicate tracks and unnecessary variables from the dataset to prepare for analysis.
 
@@ -45,7 +38,7 @@ songs = distinct(songs, track_id, .keep_all = T) %>%   #removing duplicate songs
            -playlist_name, -playlist_id, -mode))       #removing unnessesary info
 ```
 
-## 2. Stepwise Factor Selction
+### 2. Stepwise Factor Selction
 
 Data was first partitioned into training and validation sets in order to test for accuracy.
 
@@ -111,26 +104,15 @@ With categorical variable $genre_I$ where $I$ represents the follwing genres:
 * R&B = 2.308
 * EDM = 0
 
-## 3. Playlist Function
+### 3. Playlist Function
 
-The goal of the function is to use the above regression line to narrow down a huge list of songs into a short list of "best" songs using the most important variables determined by the regression line.
+The goal of the function is to use the above regression function to narrow down a huge list of songs into a short list of "best" songs using the most important variables determined by the regression.
 
 My initial plan was to use a series of T-Tests to determine song similarity, but I was not able to do it by variable, so I used *literal* difference as the deciding factor. Where $S_{gx_i}$ is a given song's $X_i$ value, $S_{cx_i}$ is a chosen song's $X_i$ value, and $Sim$ is the similarity:
 
 $$Sim = \mid S_{gx_i} - S_{cx_i} \mid$$
 
 Therefore, the smaller $Sim$ is, the more similar the variable in $S_c$ is to the variable in $S_g$.
-
-Before starting, I initialized the repetition variable and playlist dataframe.
-
-```
-playList = songs %>%
-   filter(track_id == givenID) #selects all data on selected song
-r = 1 #used for repetition
-while(r < n){ 
-   #initialize song selection
-   givenSong = playList[r,]
-```
 
 As genre($X_1$) was found to be the most important variable in determining song popularity, it was the first filter I used.
 
@@ -181,7 +163,10 @@ Finally, I used a random number generator to select from the short list of "best
     playList[r+1,] = tempDF[sample(1:nrow(tempDF), 1),] #using a random number in order to obtain unique playlists.
     r = r+1 #iteration
   }
-  
-  return(playList)
-}
 ```
+
+## <ins> Limitations </ins>
+
+1. The generator only has access to the ~30,000 songs in the kaggle dataset compared to the 100+ million songs on Spotify, so accuracy is not ensured.
+2. The language filter is not perfect, as it can only filter out languages not using the Latin alphabet, leaving many non-English European languages in the list.
+3. Popularity is not necessarily the best predictor of likingness.
