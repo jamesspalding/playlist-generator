@@ -61,9 +61,20 @@ songs = distinct(songs, track_id, .keep_all = T) %>% #removing duplicate songs
 
 playlist.create = function(givenID, n = 1, expl = T, en = T, fullData = F, export = F, name = "playlist"){ #Takes track_id as string and desired playlist length int n
   library(tidyverse)
+
   playList = songs %>%
     filter(track_id == givenID) #selects all data on selected song
-  r = 1 #used for repetition
+    
+    r = 1 #used for repetition
+    
+#----------Error Handling----------#  
+  if((n%%1==0) == F){ #Checks that n is an integer
+      return("Please enter valid playlist length.")
+  }
+  
+  if(nrow(playList) == 0){ #check that song is on list
+      return("Song not found.")
+  }
   
 #----------Language----------#   
 # The function assumes English-only, unless specified genre is Latin.
@@ -84,13 +95,6 @@ playlist.create = function(givenID, n = 1, expl = T, en = T, fullData = F, expor
       givenSong = playList[r,] #chooses songs related to previous song
     }else{
       givenSong = playList[1,] #chooses songs only related to original song
-    }
-#----------Error Handling----------#  
-    if((n%%1==0) == F){ #Checks that n is an integer
-      return("Please enter valid playlist length.")
-    }
-    if(nrow(givenSong) == 0){ #check that song is on list
-      return("Song not found.")
     }
     
 #----------Choosing Song----------#  
@@ -151,7 +155,7 @@ playlist.create = function(givenID, n = 1, expl = T, en = T, fullData = F, expor
 
 ```{r}
 #demo
-demoSong = "insert song here"
+demoSong = "6f807x0ima9a1j3VPbc7VN"
 
 #Playlist types
 playlist.create(demoSong, 20) #playlist - short
