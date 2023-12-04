@@ -163,9 +163,11 @@ playlist.create("3uXHSf9sSIpOJWuC1H8DiU", 30, export=T, name="example1")
 
 ```{r}
 #testing
+pvec = c()
 x = 50 #choose length of x
 exampleGenre = "rap" #choose genre
 
+for(i in 1:5){
 exampleSong = sample_n(songs %>%
           filter(playlist_genre == exampleGenre) , 1)
 
@@ -174,7 +176,12 @@ funcTest = playlist.create(exampleSong$track_id, x, fullData = T) #generates a p
 exampleTest = sample_n(songs %>%
                         filter(playlist_genre == exampleGenre) , x)
 
-t.test(funcTest$track_popularity, exampleTest$track_popularity)
+#list of pvals
+pvec = append(pvec, t.test(funcTest$track_popularity, exampleTest$track_popularity)[3])
+}
+
+unlist(pvec) %>%
+  mean()
 ```
 
 
