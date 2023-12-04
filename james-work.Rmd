@@ -154,9 +154,27 @@ playlist.create("7wBJfHzpfI3032CSD7CE2m", 20, fullData = T) #playlist - full
 
 #Export
 #https://www.tunemymusic.com/transfer/csv-to-spotify
-playlist.create("Insert Song ID", 20, export = T, name = "Output name")
+playlist.create("Insert Song ID", 20, export = T, name = "Output name") 
+
+
+playlist.create("3uXHSf9sSIpOJWuC1H8DiU", 30, export=T, name="example1")
 ```
 
+```{r}
+#testing
+x = 50 #choose length of x
+exampleGenre = "rap" #choose genre
+
+exampleSong = sample_n(songs %>%
+          filter(playlist_genre == exampleGenre) , 1)
+
+funcTest = playlist.create(exampleSong$track_id, x, fullData = T) #generates a playlist of length x
+
+exampleTest = sample_n(songs %>%
+                        filter(playlist_genre == exampleGenre) , x)
+
+t.test(funcTest$track_popularity, exampleTest$track_popularity)
+```
 
 
 
