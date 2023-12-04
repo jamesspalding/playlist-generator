@@ -2,25 +2,36 @@
 
 https://www.kaggle.com/datasets/joebeachcapital/30000-spotify-songs
 
-### An R function that uses linear regression to generate Spotify playlists. 
+### An R function that uses multiple regression to generate Spotify playlists. 
 
 ## <ins> Usage </ins>
 
 ```
-playlist.create(givenID, n = 1, en = T, fullData = F, export = F, name = "playlist")
+playlist.create(givenID, n = 1, expl = T, en = T, fullData = F, export = F, name = "playlist")
 ```
 
 The **playlist.create** function takes the following parameters:
 
 
-* givenID: Spotify songID of a song you wish to generate a playlist based off of
+* givenID: Spotify songID of a song you wish to generate a playlist based off of, no default
 * n: desired length of playlist, default value = 1
+* expl: exploratory mode, default = TRUE
 * en: eliminate songs containing letters outside of the English alphabet, default value = TRUE
 * fullData: return all song data of playlist songs, default value = FALSE
 * export: export playlist as .csv file, default value = FALSE
-* name: name of exported .csv file, default = "playlist" 
+* name: name of exported .csv file, default = "playlist"
 
-An exported .csv file can be input into the following website to export directly to any music streaming service:
+### Exploratory Mode
+
+When expl = TRUE, the songs from the playlist will be found recursively. The function will take the previously generated song and generate a song similar to it, rather than the given song. This will bring you farther away from your original song as the length expands, with the idea of "exploring" the genre to find new songs.
+
+When expl = FALSE, all songs in the playlist will be selected with only the given song in mind. This will generate a playlist of songs most similar to the given song.
+
+### Export
+
+When export = TRUE, a .csv file will be generated into the present working directory.
+
+This file can be input into the following website to export directly to any music streaming service:
 
 https://www.tunemymusic.com/transfer/csv-to-spotify
 
@@ -122,7 +133,7 @@ genreDF = songs %>%
    filter(!track_id %in% playList$track_id) 
 ```
 
-For instrumentalness, I ran into a problem with songs with an instrumentalness value of 0, which lead me to use an if statement to select only said songs in the case that the given song has a 0 instrumentalness value. In the case that instrumentalness $\not = 0$, I used the quantile() function to select only the songs within the smallest 50% of values.
+For instrumentalness, I ran into a problem with songs with an instrumentalness value of 0, which lead me to use an if statement to select only said songs in the case that the given song has a 0 instrumentalness value. In the case that instrumentalness $\not = 0$, I used the quantile() function to select only the songs within the smallest 57.5% of values.
 
 ```
 if(givenSong[1,14] == 0){ #Needed if/else statements to avoid an error
@@ -170,3 +181,4 @@ Finally, I used a random number generator to select from the short list of "best
 1. The generator only has access to the ~30,000 songs in the kaggle dataset compared to the 100+ million songs on Spotify, so accuracy is not ensured.
 2. The language filter is not perfect, as it can only filter out languages not using the Latin alphabet, leaving many non-English European languages in the list.
 3. Popularity is not necessarily the best predictor of likingness.
+4. The function seems to have a high chance to break at longer playlist lengths.
