@@ -8,7 +8,6 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
-attach(songs)
 ```
 
 ```{r}
@@ -23,26 +22,26 @@ songs = distinct(songs, track_id, .keep_all = T) %>% #removing duplicate songs
 
 ```{r}
 #plotting regression
-factorAvg = rowMeans(songs[8:17])
-
-lm(track_popularity~as.factor(playlist_genre)+instrumentalness+energy+loudness+danceability+acousticness+liveness+tempo+valence)
-
-ggplot(songs, aes(instrumentalness, track_popularity, color = playlist_genre))+
-  geom_point()+
-  geom_abline()
-
+# factorAvg = rowMeans(songs[8:17])
+# 
+# lm(track_popularity~as.factor(playlist_genre)+instrumentalness+energy+loudness+danceability+acousticness+liveness+tempo+valence)
+# 
+# ggplot(songs, aes(instrumentalness, track_popularity, color = playlist_genre))+
+#   geom_point()+
+#   geom_abline()
+# 
 
 ```
 
 ```{r}
-songs2 = songs %>%
-  select(track_popularity, 8:17) #using only numeric values
-
-songPC = princomp(songs2, cor = T)
-summary(songPC, loadings = T) #only 33.66% explained with 2 comps
-
-library(ggfortify)
-autoplot(songPC, loadings=T, loadings.label=T, data = songs2) #looks kind of nice?
+# songs2 = songs %>%
+#   select(track_popularity, 8:17) #using only numeric values
+# 
+# songPC = princomp(songs2, cor = T)
+# summary(songPC, loadings = T) #only 33.66% explained with 2 comps
+# 
+# library(ggfortify)
+# autoplot(songPC, loadings=T, loadings.label=T, data = songs2) #looks kind of nice?
 ```
 
 
@@ -60,7 +59,7 @@ autoplot(songPC, loadings=T, loadings.label=T, data = songs2) #looks kind of nic
 ```{r}
 #Idea: Since popularity is likeness of the masses, we can use regression line to predict most "popular" song that relates to the original song.
 
-playlist.create = function(givenID, n = 1, en = T, fullData = F, export = F, name = "playlist"){ #Takes track_id as string and desired playlist length int n
+playlist.create = function(givenID, n = 1, expl = T, en = T, fullData = F, export = F, name = "playlist"){ #Takes track_id as string and desired playlist length int n
   library(tidyverse)
   playList = songs %>%
     filter(track_id == givenID) #selects all data on selected song
@@ -81,8 +80,11 @@ playlist.create = function(givenID, n = 1, en = T, fullData = F, export = F, nam
   while(r < n){
     
     #initialize song selection
-    givenSong = playList[r,]
-    
+    if(expl == T){
+      givenSong = playList[r,] #chooses songs related to previous song
+    }else{
+      givenSong = playList[1,] #chooses songs only related to original song
+    }
 #----------Error Handling----------#  
     if((n%%1==0) == F){ #Checks that n is an integer
       return("Please enter valid playlist length.")
@@ -110,8 +112,8 @@ playlist.create = function(givenID, n = 1, en = T, fullData = F, export = F, nam
         similarity[i,] = abs(givenSong[1,14] - genreDF[i,14])
       }
       
-      tempDF = cbind(genreDF, similarity) %>% #selecting songs with bottom 50% closest
-        filter(sim < quantile(similarity[,1])[3]) %>%
+      tempDF = cbind(genreDF, similarity) %>% 
+        filter(sim < quantile(similarity[,1], probs = .575)) %>% #changing takes bottom 57.5%
         select(-sim) #removing temp sim
     }
   
@@ -123,8 +125,8 @@ playlist.create = function(givenID, n = 1, en = T, fullData = F, export = F, nam
         similarity[i,] = abs(givenSong[1,x] - tempDF[i,x])
       }
       
-      tempDF = cbind(tempDF, similarity) %>% #selecting songs with bottom 50% closest
-        filter(sim < quantile(similarity[,1])[3]) %>%
+      tempDF = cbind(tempDF, similarity) %>% 
+        filter(sim < quantile(similarity[,1], probs = .575)) %>% # bottom .575
         select(-sim) #removing temp sim
     }
     
@@ -149,32 +151,32 @@ playlist.create = function(givenID, n = 1, en = T, fullData = F, export = F, nam
 
 ```{r}
 #demo
-playlist.create("7wBJfHzpfI3032CSD7CE2m", 20) #playlist - short
-playlist.create("7wBJfHzpfI3032CSD7CE2m", 20, fullData = T) #playlist - full
+demoSong = "insert song here"
 
+#Playlist types
+playlist.create(demoSong, 20) #playlist - short
+playlist.create(demoSong, 20, expl = F) #playlist - non-exploratory
+playlist.create(demoSong, 20, fullData = T) #playlist - full
 
 #Export
 #https://www.tunemymusic.com/transfer/csv-to-spotify
-playlist.create("Insert Song ID", 20, export = T, name = "Output name") 
-
-
-playlist.create("3uXHSf9sSIpOJWuC1H8DiU", 30, export=T, name="example1")
+playlist.create(demoSong, 20, export = T, name = "Output name") 
 ```
 
 ```{r}
 #testing
 pvec = c()
-x = 50 #choose length of x
-exampleGenre = "rap" #choose genre
+x = 10 #choose length of x
+exampleGenre = "pop" #choose genre
 
-for(i in 1:5){
+for(i in 1:15){
 exampleSong = sample_n(songs %>%
-          filter(playlist_genre == exampleGenre) , 1)
+          filter(playlist_genre == exampleGenre) , 1) #selects random song within genre
 
 funcTest = playlist.create(exampleSong$track_id, x, fullData = T) #generates a playlist of length x
 
 exampleTest = sample_n(songs %>%
-                        filter(playlist_genre == exampleGenre) , x)
+                        filter(playlist_genre == exampleGenre) , x) #generates a random list of length x
 
 #list of pvals
 pvec = append(pvec, t.test(funcTest$track_popularity, exampleTest$track_popularity)[3])
