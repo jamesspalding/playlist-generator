@@ -179,6 +179,7 @@ Finally, I used a random number generator to select from the short list of "best
 ## <ins> Limitations </ins>
 
 1. The generator only has access to the ~30,000 songs in the kaggle dataset compared to the 100+ million songs on Spotify, so accuracy is not ensured.
-2. The language filter is not perfect, as it can only filter out languages not using the Latin alphabet, leaving many non-English European languages in the list.
-3. Popularity is not necessarily the best predictor of likingness.
-4. The function seems to have a high chance to break at longer playlist lengths.
+2. Songs are not always classified into their correct genre, as the dataset is based off of automatically generated playlists.
+3. The language filter is not perfect, as it can only filter out languages not using the Latin alphabet, leaving many non-English European languages in the list.
+4. Popularity is not necessarily the best predictor of likingness.
+5. The function seems to have a high chance to break at longer playlist lengths.
