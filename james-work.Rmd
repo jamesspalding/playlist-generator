@@ -61,6 +61,7 @@ autoplot(songPC, loadings=T, loadings.label=T, data = songs2) #looks kind of nic
 #Idea: Since popularity is likeness of the masses, we can use regression line to predict most "popular" song that relates to the original song.
 
 playlist.create = function(givenID, n = 1, en = T, fullData = F, export = F, name = "playlist"){ #Takes track_id as string and desired playlist length int n
+  library(tidyverse)
   playList = songs %>%
     filter(track_id == givenID) #selects all data on selected song
   r = 1 #used for repetition
