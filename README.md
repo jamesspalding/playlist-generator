@@ -175,6 +175,22 @@ Finally, I used a random number generator to select from the short list of "best
     r = r+1 #iteration
   }
 ```
+## <ins> Testing </ins>
+To investigate and test the model made using the step wise function, I first created a validation model using the validation data. I then compared the coefficients from each model to observe any under fitting or over fitting errors. From the data set most coefficients are fairly similar, but a few differences do stick out. The intercept, x1 r&b, x3, x2, x9, and x10 each have significant differences (+ or - 1.5 values) between training and validation models. 
+```{r}
+#validation model
+best.model.validation <- lm(y.validation~x1.validation+x8.validation+x3.validation+x5.validation+x2.validation+x7.validation+x9.validation+x11.validation+x10.validation)
+
+#comparing coefficients
+coef<-data.frame(coefficients(best.model.training),coefficients(best.model.validation))
+
+diff<-data.frame(coefficients(best.model.training)-coefficients(best.model.validation))
+labels<-c("Differences")
+colnames(diff)<-labels
+names<-c("Intercept","x1.latin","x1.pop","x1.r&b","x1.rap","x1.rock","x8","x3","x5","x2","x7","x9","x11","x10")
+diff<-cbind(names,diff)
+ggplot(diff, aes(x=diff$names, y=diff$Differences)) +  geom_bar(stat = "identity", fill = "deepskyblue4", width = 0.7) +labs(title = "Comparing Coefficients", x = "Predictors",y = " Differences")
+```
 
 ## <ins> Limitations </ins>
 
