@@ -1,0 +1,167 @@
+---
+title: "Demo"
+author: "James Spalding"
+date: "2023-12-8"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+# Data Cleaning
+
+```{r}
+#Step 1: clean data
+
+songs = read.csv("spotify_songs.csv") 
+songs = distinct(songs, track_id, .keep_all = T) %>% #removing duplicate songs
+  select(c(-track_album_id, -track_album_name, #removing album info
+           -playlist_name, -playlist_id, #removing playlist info
+           -mode, -duration_ms)) #removing unnecessary info
+```
+
+# Playlist Generation
+
+```{r}
+#Idea: Since popularity is likeness of the masses, we can use regression line to predict most "popular" song that relates to the original song.
+
+playlist.create = function(givenID, n = 1, expl = T, en = T, fullData = F, export = F, name = "playlist"){ #Takes track_id as string and desired playlist length int n
+  library(tidyverse)
+
+  playList = songs %>%
+    filter(track_id == givenID) #selects all data on selected song
+    
+    r = 1 #used for repetition
+    
+#----------Error Handling----------#  
+  if((n%%1==0) == F){ #Checks that n is an integer
+      return("Please enter valid playlist length.")
+  }
+  
+  if(nrow(playList) == 0){ #check that song is on list
+      return("Song not found.")
+  }
+  
+#----------Language----------#   
+# The function assumes English-only, unless specified genre is Latin.
+  
+  if(playList$playlist_genre[1] == "latin"){ #Making english-only exception for latin genre
+    en = F
+  }
+  if(en == T){ #removes songs containing letters outside the english alphabet; isn't perfect, but better than none. 1300 songs removed
+    songs = songs %>% 
+      mutate(track_name = iconv(track_name, from = "latin1", to = "ASCII")) %>%
+      filter(!is.na(track_name))
+  }
+  
+  while(r < n){
+    
+    #initialize song selection
+    if(expl == T){
+      givenSong = playList[r,] #chooses songs related to previous song
+    }else{
+      givenSong = playList[1,] #chooses songs only related to original song
+    }
+    
+#----------Choosing Song----------#  
+# Idea: using the regression model, we can identify the most important factors. We can find the most similar of each category and use a random number generator on the most similar.
+    
+#-----X1: Genre-----#  
+    genreDF = songs %>% #genre is the most important factor, so it will go first.
+      filter(playlist_genre == givenSong$playlist_genre) %>%
+      filter(!track_id %in% playList$track_id) #removing any prior song
+    
+#-----X2: Instrumentalness-----#
+    if(givenSong[1,14] == 0){ #Needed if/else statements to avoid an error
+      tempDF = genreDF %>%
+        filter(genreDF[,14] == 0)
+    }
+    else{
+      similarity = data.frame(sim = numeric(nrow(genreDF)))
+      for(i in 1:nrow(similarity)){
+        similarity[i,] = abs(givenSong[1,14] - genreDF[i,14])
+      }
+      
+      tempDF = cbind(genreDF, similarity) %>% 
+        filter(sim < quantile(similarity[,1], probs = .575)) %>% #changing takes bottom 57.5%
+        select(-sim) #removing temp sim
+    }
+  
+#-----X3-X9: Everything Else-----#  
+    variableIndex = c(9, 11, 8, 13, 15, 17, 16) #energy, loudness, danceability, acousticness, liveness, tempo, valence
+    for(x in variableIndex){ #loop through remaining variables
+      similarity = data.frame(sim = numeric(nrow(tempDF))) 
+      for(i in 1:nrow(similarity)){
+        similarity[i,] = abs(givenSong[1,x] - tempDF[i,x])
+      }
+      
+      tempDF = cbind(tempDF, similarity) %>% 
+        filter(sim < quantile(similarity[,1], probs = .575)) %>% # bottom .575
+        select(-sim) #removing temp sim
+    }
+    
+#-----Final Selection-----#   
+    playList[r+1,] = tempDF[sample(1:nrow(tempDF), 1),] #using a random number in order to obtain unique playlists.
+    r = r+1 #iteration
+  }
+  
+#-----Output-----#  
+  if(export == T){ #exports playlist to csv
+    write.csv(data.frame(song = playList$track_name, artist = playList$track_artist), paste0(name,".csv"), row.names = F)
+    return(cat("Playlist generated as ", name))
+  }
+  if(fullData == F){ #only returns track/artist
+    return(data.frame(song = playList$track_name, artist = playList$track_artist))
+  }else{
+    return(playList)
+  }
+}
+
+```
+
+# Example
+
+```{r}
+#demo
+demoSong = "enter song here"
+
+#Playlist types
+playlist.create(demoSong, 20) #playlist - short
+playlist.create(demoSong, 20, expl = F) #playlist - non-exploratory
+playlist.create(demoSong, 20, fullData = T) #playlist - full
+
+#Export
+#https://www.tunemymusic.com/transfer/csv-to-spotify
+playlist.create(demoSong, 20, export = T, name = "Output name") 
+```
+
+# Testing
+
+```{r}
+#testing
+pvec = c()
+x = 20 #choose length of x
+exampleGenre = "pop" #choose genre
+
+for(i in 1:10){
+exampleSong = sample_n(songs %>%
+          filter(playlist_genre == exampleGenre) , 1) #selects random song within genre
+
+funcTest = playlist.create(exampleSong$track_id, x, fullData = T,expl = F) #generates a playlist of length x
+
+exampleTest = sample_n(songs %>%
+                        filter(playlist_genre == exampleGenre) , x) #generates a random list of length x
+
+#list of pvals
+pvec = append(pvec, t.test(funcTest$track_popularity, exampleTest$track_popularity)[3])
+}
+
+unlist(pvec) %>%
+  mean()
+```
+
+
+
+
