@@ -1,0 +1,489 @@
+---
+title: "julia-work.rmd"
+author: "Julia Haas"
+date: "2023-11-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#Data Cleaning
+```{r, warning=FALSE}
+library(tidyverse)
+songs<-read.csv("spotify_songs.csv")
+songs <- distinct(songs, track_id, .keep_all = T) %>% #removing duplicate songs
+  select(c(-track_album_id, -track_album_name, #removing album info
+           -playlist_name, -playlist_id)) #removing playlist info
+```
+
+#Stepwise: Ryan's work
+
+```{r}
+#Step 1: clean data
+
+songs = read.csv("spotify_songs.csv") 
+songs = distinct(songs, track_id, .keep_all = T) %>% #removing duplicate songs
+  select(c(-track_album_id, -track_album_name, #removing album info
+           -playlist_name, -playlist_id, #removing playlist info
+           -mode, -duration_ms)) #removing unnecessary info
+songs
+```
+
+```{r, warning=FALSE, message=FALSE}
+# Idea for Step 2... Use popularity as response variable to run stepwise model to determine the significant predictor variables
+
+# playlist_genre: 6 types
+# playlist_subgenre: 24 types... not important?
+
+# attach variables
+songs <- attach(songs)
+
+# set variables to easier variable names
+y <- track_popularity; x1 <- playlist_genre; x2 <- danceability; x3 <- energy; x4 <- key; x5 <- loudness; x6 <- speechiness
+x7 <- acousticness; x8 <- instrumentalness; x9 <- liveness; x10 <- valence; x11 <- tempo
+
+x1 <- factor(x1)  # set x1 as a categorical factor
+
+# generate a smaller sample to look at sample plots
+set.seed(123)
+sample.data <- sort(sample(1:28356, 100, replace = FALSE)) 
+
+# examine all plots of predictor variables against response variable
+pairs(cbind(y[c(sample.data)],x1[c(sample.data)],x2[c(sample.data)],x3[c(sample.data)],x4[c(sample.data)]))
+pairs(cbind(y[c(sample.data)],x5[c(sample.data)],x6[c(sample.data)],x7[c(sample.data)],x8[c(sample.data)]))
+pairs(cbind(y[c(sample.data)],x9[c(sample.data)],x10[c(sample.data)],x11[c(sample.data)])) # all plots seem okay??
+
+# should test for correlation between variables?
+```
+
+
+```{r}
+# setting a random training dataset from the song data to run the Stepwise process
+set.seed(123)
+training.data <- sort(sample(1:28356, 10000, replace = FALSE)) 
+
+# creating the variables holding the training data
+y.training <- y[training.data]; x1.training <- x1[training.data]; x2.training <- x2[training.data]; x3.training <- x3[training.data]; x4.training <- x4[training.data]
+x5.training <- x5[training.data]; x6.training <- x6[training.data]; x7.training <- x7[training.data]; x8.training <- x8[training.data]
+x9.training <- x9[training.data]; x10.training <- x10[training.data]; x11.training <- x11[training.data]
+
+# finding the validation dataset, all 
+validation.data <- setdiff(1:28356, training.data)
+
+# creating the remaining variables holding the validation data
+y.validation <- y[validation.data];
+x1.validation <- x1[validation.data]; 
+x2.validation <- x2[validation.data];
+x3.validation <- x3[validation.data];
+x4.validation <- x4[validation.data]
+x5.validation <- x5[validation.data]; 
+x6.validation <- x6[validation.data];
+x7.validation <- x7[validation.data];
+x8.validation <- x8[validation.data]
+x9.validation <- x9[validation.data];
+x10.validation <- x10[validation.data]; 
+x11.validation <- x11[validation.data]
+
+### 1st Stepwise step
+# gather p-values
+pval.x1.latin=coefficients(summary(lm(y.training~x1.training)))[2,4]
+pval.x1.pop=coefficients(summary(lm(y.training~x1.training)))[3,4]
+pval.x1.randb=coefficients(summary(lm(y.training~x1.training)))[4,4]
+pval.x1.rap=coefficients(summary(lm(y.training~x1.training)))[5,4]
+pval.x1.rock=coefficients(summary(lm(y.training~x1.training)))[6,4]
+pval.x2=coefficients(summary(lm(y.training~x2.training)))[2,4]
+pval.x3=coefficients(summary(lm(y.training~x3.training)))[2,4]
+pval.x4=coefficients(summary(lm(y.training~x4.training)))[2,4]
+pval.x5=coefficients(summary(lm(y.training~x5.training)))[2,4]
+pval.x6=coefficients(summary(lm(y.training~x6.training)))[2,4]
+pval.x7=coefficients(summary(lm(y.training~x7.training)))[2,4]
+pval.x8=coefficients(summary(lm(y.training~x8.training)))[2,4]
+pval.x9=coefficients(summary(lm(y.training~x9.training)))[2,4]
+pval.x10=coefficients(summary(lm(y.training~x10.training)))[2,4]
+pval.x11=coefficients(summary(lm(y.training~x11.training)))[2,4]
+
+# test which p-value is the smallest
+pvals=c(pval.x1.latin,pval.x1.pop,pval.x1.randb,pval.x1.rap,pval.x1.rock,pval.x2,pval.x3,pval.x4,pval.x5,pval.x6,pval.x7,pval.x8,pval.x9,pval.x10,pval.x11)
+which(pvals==min(pvals))  # 2nd entry in pvals returns the smallest p-value, which is the pop genre of variable x1 (playlist_genre)
+
+pvals[2]  # 3.030825e-80 < .05
+
+
+
+### 2nd Stepwise step
+# gather p-values where x1 is already in the model
+pval.x1.x2=coefficients(summary(lm(y.training~x1.training+x2.training)))[7,4]
+pval.x1.x3=coefficients(summary(lm(y.training~x1.training+x3.training)))[7,4]
+pval.x1.x4=coefficients(summary(lm(y.training~x1.training+x4.training)))[7,4]
+pval.x1.x5=coefficients(summary(lm(y.training~x1.training+x5.training)))[7,4]
+pval.x1.x6=coefficients(summary(lm(y.training~x1.training+x6.training)))[7,4]
+pval.x1.x7=coefficients(summary(lm(y.training~x1.training+x7.training)))[7,4]
+pval.x1.x8=coefficients(summary(lm(y.training~x1.training+x8.training)))[7,4]
+pval.x1.x9=coefficients(summary(lm(y.training~x1.training+x9.training)))[7,4]
+pval.x1.x10=coefficients(summary(lm(y.training~x1.training+x10.training)))[7,4]
+pval.x1.x11=coefficients(summary(lm(y.training~x1.training+x11.training)))[7,4]
+
+# test which p-value is the smallest
+pvals.x1=c(pval.x1.x2,pval.x1.x3,pval.x1.x4,pval.x1.x5,pval.x1.x6,pval.x1.x7,pval.x1.x8,pval.x1.x9,pval.x1.x10,pval.x1.x11)
+which(pvals.x1==min(pvals.x1))  # variable x8 (instrumentalness) is found to return the smallest p-value when x1 (playlist_genre) is already in the model
+
+pvals.x1[7]  # 1.311291e-21 < .05
+
+coefficients(summary(lm(y.training~x1.training+x8.training)))  # each category of x1 (playlist_genre) still remains significant when x8 (instrumentalness) is added to the model
+
+
+
+### 3rd Stepwise step
+# gather p-values where x1 and x8 are already in the model
+pval.x1.x8.x2=coefficients(summary(lm(y.training~x1.training+x8.training+x2.training)))[8,4]
+pval.x1.x8.x3=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training)))[8,4]
+pval.x1.x8.x4=coefficients(summary(lm(y.training~x1.training+x8.training+x4.training)))[8,4]
+pval.x1.x8.x5=coefficients(summary(lm(y.training~x1.training+x8.training+x5.training)))[8,4]
+pval.x1.x8.x6=coefficients(summary(lm(y.training~x1.training+x8.training+x6.training)))[8,4]
+pval.x1.x8.x7=coefficients(summary(lm(y.training~x1.training+x8.training+x7.training)))[8,4]
+pval.x1.x8.x9=coefficients(summary(lm(y.training~x1.training+x8.training+x9.training)))[8,4]
+pval.x1.x8.x10=coefficients(summary(lm(y.training~x1.training+x8.training+x10.training)))[8,4]
+pval.x1.x8.x11=coefficients(summary(lm(y.training~x1.training+x8.training+x11.training)))[8,4]
+
+# test which p-value is the smallest
+pvals.x1.x8=c(pval.x1.x8.x2,pval.x1.x8.x3,pval.x1.x8.x4,pval.x1.x8.x5,pval.x1.x8.x6,pval.x1.x8.x7,pval.x1.x8.x9,pval.x1.x8.x10,pval.x1.x8.x11)
+which(pvals.x1.x8==min(pvals.x1.x8))  # variable x3 (energy) is found to return the smallest p-value when x1 (playlist_genre) and x8 (instrumentalness) are already in the model
+
+pvals.x1.x8[2]  # 3.277445e-13 < .05
+
+coefficients(summary(lm(y.training~x1.training+x8.training+x3.training))) # most categories of x1 (playlist_genre) are still significant, and x8 (instrumentalness) is still significant when x3 (energy) is added to the model
+
+
+
+### 4th Stepwise step
+# gather p-values where x1, x8, and x3 are already in the model
+pval.x1.x8.x3.x2=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x2.training)))[9,4]
+pval.x1.x8.x3.x4=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x4.training)))[9,4]
+pval.x1.x8.x3.x5=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training)))[9,4]
+pval.x1.x8.x3.x6=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x6.training)))[9,4]
+pval.x1.x8.x3.x7=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x7.training)))[9,4]
+pval.x1.x8.x3.x9=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x9.training)))[9,4]
+pval.x1.x8.x3.x10=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x10.training)))[9,4]
+pval.x1.x8.x3.x11=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x11.training)))[9,4]
+
+# test which p-value is the smallest
+pvals.x1.x8.x3=c(pval.x1.x8.x3.x2,pval.x1.x8.x3.x4,pval.x1.x8.x3.x5,pval.x1.x8.x3.x6,pval.x1.x8.x3.x7,pval.x1.x8.x3.x9,pval.x1.x8.x3.x10,pval.x1.x8.x3.x11)
+which(pvals.x1.x8.x3==min(pvals.x1.x8.x3))  # variable x5 (loudness) is found to return the smallest p-value when x1, x8, and x3 are already in the model
+
+pvals.x1.x8.x3[3]  # 9.176121e-42 < .05
+
+coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training)))  # all categories of x1 (playlist_genre), x8 (instrumentalness), and x3 (energy) are still significant when x5 (loudness) is added to the model
+
+
+
+### 5th Stepwise step
+# gather p-values where x1, x8, x3, and x5 are already in the model
+pval.x1.x8.x3.x5.x2=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training)))[10,4]
+pval.x1.x8.x3.x5.x4=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x4.training)))[10,4]
+pval.x1.x8.x3.x5.x6=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x6.training)))[10,4]
+pval.x1.x8.x3.x5.x7=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x7.training)))[10,4]
+pval.x1.x8.x3.x5.x9=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x9.training)))[10,4]
+pval.x1.x8.x3.x5.x10=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x10.training)))[10,4]
+pval.x1.x8.x3.x5.x11=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x11.training)))[10,4]
+
+# test which p-value is the smallest
+pvals.x1.x8.x3.x5=c(pval.x1.x8.x3.x5.x2,pval.x1.x8.x3.x5.x4,pval.x1.x8.x3.x5.x6,pval.x1.x8.x3.x5.x7,pval.x1.x8.x3.x5.x9,pval.x1.x8.x3.x5.x10,pval.x1.x8.x3.x5.x11)
+which(pvals.x1.x8.x3.x5==min(pvals.x1.x8.x3.x5))  # variable x2 (danceability) is found to return the smallest p-value when variables x1, x8, x3, and x5 are already in the model
+
+pvals.x1.x8.x3.x5[1]  # 2.225464e-10 < .05
+
+coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training)))  # all categories of x1 (playlist_genre), x8 (instrumentalness), x3 (energy), and x5 (loudness) are still significant when x2 (danceability) is added to the model
+
+
+
+### 6th Stepwise step
+# gather p-values where x1, x8, x3, x5, and x2 are already in the model
+pval.x1.x8.x3.x5.x2.x4=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x4.training)))[11,4]
+pval.x1.x8.x3.x5.x2.x6=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x6.training)))[11,4]
+pval.x1.x8.x3.x5.x2.x7=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training)))[11,4]
+pval.x1.x8.x3.x5.x2.x9=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x9.training)))[11,4]
+pval.x1.x8.x3.x5.x2.x10=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x10.training)))[11,4]
+pval.x1.x8.x3.x5.x2.x11=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x11.training)))[11,4]
+
+# test which p-value is the smallest
+pvals.x1.x8.x3.x5.x2=c(pval.x1.x8.x3.x5.x2.x4,pval.x1.x8.x3.x5.x2.x6,pval.x1.x8.x3.x5.x2.x7,pval.x1.x8.x3.x5.x2.x9,pval.x1.x8.x3.x5.x2.x10,pval.x1.x8.x3.x5.x2.x11)
+which(pvals.x1.x8.x3.x5.x2==min(pvals.x1.x8.x3.x5.x2))  # variable x7 (acousticness) is found to return the smallest p-value when x1, x8, x3, x5, and x2 are already in the model
+
+pvals.x1.x8.x3.x5.x2[3]  # 3.029837e-06 < .05
+
+coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training)))  # all categories of x1 (playlist_genre), x8 (instrumentalness), x3 (energy), x5 (loudness), and x2 (danceability) are still significant when x7 (acousticenss) is added to the model
+
+
+
+### 7th Stepwise step
+# gather p-values where x1, x8, x3, x5, x2, and x7 are already in the model
+pval.x1.x8.x3.x5.x2.x7.x4=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x4.training)))[12,4]
+pval.x1.x8.x3.x5.x2.x7.x6=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x6.training)))[12,4]
+pval.x1.x8.x3.x5.x2.x7.x9=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x9.training)))[12,4]
+pval.x1.x8.x3.x5.x2.x7.x10=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x10.training)))[12,4]
+pval.x1.x8.x3.x5.x2.x7.x11=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x11.training)))[12,4]
+
+# test which p-value is the smallest
+pvals.x1.x8.x3.x5.x2.x7=c(pval.x1.x8.x3.x5.x2.x7.x4,pval.x1.x8.x3.x5.x2.x7.x6,pval.x1.x8.x3.x5.x2.x7.x9,pval.x1.x8.x3.x5.x2.x7.x10,pval.x1.x8.x3.x5.x2.x7.x11)
+which(pvals.x1.x8.x3.x5.x2.x7==min(pvals.x1.x8.x3.x5.x2.x7))  # variable x9 (livenss) is found to return the smallest p-value when x1, x8, x3, x5, x2, and x7 are already in the model
+
+pvals.x1.x8.x3.x5.x2.x7[3]  # 0.003860144 < .05
+
+coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x9.training)))  # most categories of x1 (playlist_genre), x8 (instrumentalness), x3 (energy), x5 (loudness), x2 (danceability), and x7 (acousticness) are still significant when x9 (liveness) is added to the model
+
+
+
+### 8th Stepwise step
+# gather p-values where x1, x8, x3, x5, x2, x7, and x9 are already in the model
+pval.x1.x8.x3.x5.x2.x7.x9.x4=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x9.training+x4.training)))[13,4]
+pval.x1.x8.x3.x5.x2.x7.x9.x6=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x9.training+x6.training)))[13,4]
+pval.x1.x8.x3.x5.x2.x7.x9.x10=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x9.training+x10.training)))[13,4]
+pval.x1.x8.x3.x5.x2.x7.x9.x11=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x9.training+x11.training)))[13,4]
+
+# test which p-value is the smallest
+pvals.x1.x8.x3.x5.x2.x7.x9=c(pval.x1.x8.x3.x5.x2.x7.x9.x4,pval.x1.x8.x3.x5.x2.x7.x9.x6,pval.x1.x8.x3.x5.x2.x7.x9.x10,pval.x1.x8.x3.x5.x2.x7.x9.x11)
+which(pvals.x1.x8.x3.x5.x2.x7.x9==min(pvals.x1.x8.x3.x5.x2.x7.x9))  # variable x11 (tempo) is found to return the smallest p-value when x1, x8, x3, x5, x2, x7, and x9 are already in the model
+
+pvals.x1.x8.x3.x5.x2.x7.x9[4]  # 0.008217235 < .05
+
+coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x9.training+x11.training)))  # all categories of x1 (playlist_genre), x8 (instrumentalness), x3 (energy), x5 (loudness), x2 (danceability), x7 (acousticness), and x9 (liveness) are still significant when x11 (tempo) is added to the model
+
+
+
+### 9th Stepwise step
+# gather p-values where x1, x8, x3, x5, x2, x7, x9, and x11 are already in the model
+pval.x1.x8.x3.x5.x2.x7.x9.x11.x4=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x9.training+x11.training+x4.training)))[14,4]
+pval.x1.x8.x3.x5.x2.x7.x9.x11.x6=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x9.training+x11.training+x6.training)))[14,4]
+pval.x1.x8.x3.x5.x2.x7.x9.x11.x10=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x9.training+x11.training+x10.training)))[14,4]
+
+# test which p-value is the smallest
+pvals.x1.x8.x3.x5.x2.x7.x9.x11=c(pval.x1.x8.x3.x5.x2.x7.x9.x11.x4,pval.x1.x8.x3.x5.x2.x7.x9.x11.x6,pval.x1.x8.x3.x5.x2.x7.x9.x11.x10)
+which(pvals.x1.x8.x3.x5.x2.x7.x9.x11==min(pvals.x1.x8.x3.x5.x2.x7.x9.x11))  # variable x10 (valence) is found to return the smallest p-value when x1, x8, x3, x5, x2, x7, x9, and x11 are already in the model
+
+pvals.x1.x8.x3.x5.x2.x7.x9.x11[3]  # 0.04035236 < .05
+
+coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x9.training+x11.training+x10.training)))  # all categories of x1 (playlist_genre), x8 (instrumentalness), x3 (energy), x5 (loudness), x2 (danceability), x7 (acousticness), x9 (liveness), and x11 (tempo) are still significant when x10 (valence) is added to the model
+
+
+
+### 10th Stepwise step
+# gather p-values where x1, x8, x3, x5, x2, x7, x9, x11, and x10 are already in the model
+pval.x1.x8.x3.x5.x2.x7.x9.x11.x10.x4=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x9.training+x11.training+x10.training+x4.training)))[15,4]
+pval.x1.x8.x3.x5.x2.x7.x9.x11.x10.x6=coefficients(summary(lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x9.training+x11.training+x10.training+x6.training)))[15,4]
+
+# test which p-value is the smallest
+pvals.x1.x8.x3.x5.x2.x7.x9.x11.x10=c(pval.x1.x8.x3.x5.x2.x7.x9.x11.x10.x4,pval.x1.x8.x3.x5.x2.x7.x9.x11.x10.x6)
+which(pvals.x1.x8.x3.x5.x2.x7.x9.x11.x10==min(pvals.x1.x8.x3.x5.x2.x7.x9.x11.x10))  # variable x4 (key) is found to return the smallest p-value when x1, x8, x3, x5, x2, x7, x9, x11, and x10 are already in the model
+
+pvals.x1.x8.x3.x5.x2.x7.x9.x11.x10[1]  # 0.4950643 > .05, so we should stop and not add any other variables to the model.
+                                       # Therefore, we have our best model containing x1 (playlist_genre), x8 (instrumentalness),  x3 (energy), x5 (loudness), x2 (danceability), x7 (acousticness), x9 (livenss), x11 (tempo), and x10 (valence).
+
+# best model found from the Stepwise process on the training dataset
+best.model.training <- lm(y.training~x1.training+x8.training+x3.training+x5.training+x2.training+x7.training+x9.training+x11.training+x10.training)
+
+summary(best.model.training)$coef
+```
+  The Stepwise process on the training data gives the best linear regression model for the edm category of the playlist genre to be $$\widehat{Popularity} = 46.84327861 - 7.33963458(Instrumentalness) - 20.96812717(Energy) + 1.44788261(Loudness) + 13.68405666(Danceability) + 6.28231307(Acousticness) - 4.12188004(Liveness) + 0.02403758(Tempo) - 2.32546662(Valence)$$
+  
+  and for the latin category to be $$\widehat{Popularity} = (46.84327861 + 6.76104261) - 7.33963458(Instrumentalness) - 20.96812717(Energy) + 1.44788261(Loudness) + 13.68405666(Danceability) + 6.28231307(Acousticness) - 4.12188004(Liveness) + 0.02403758(Tempo) - 2.32546662(Valence)$$, 
+  
+and for the pop category to be $$\widehat{Popularity} = (46.84327861 + 12.39529693) - 7.33963458(Instrumentalness) - 20.96812717(Energy) + 1.44788261(Loudness) + 13.68405666(Danceability) + 6.28231307(Acousticness) - 4.12188004(Liveness) + 0.02403758(Tempo) - 2.32546662(Valence)$$, 
+
+and for the r&b category to be $$\widehat{Popularity} = (46.84327861 + 2.30816516) - 7.33963458(Instrumentalness) - 20.96812717(Energy) + 1.44788261(Loudness) + 13.68405666(Danceability) + 6.28231307(Acousticness) - 4.12188004(Liveness) + 0.02403758(Tempo) - 2.32546662(Valence)$$, 
+
+and for the rap category to be $$\widehat{Popularity} = (46.84327861 + 7.70061302) - 7.33963458(Instrumentalness) - 20.96812717(Energy) + 1.44788261(Loudness) + 13.68405666(Danceability) + 6.28231307(Acousticness) - 4.12188004(Liveness) + 0.02403758(Tempo) - 2.32546662(Valence)$$, 
+
+and lastly for the rock category of playlist genre to be $$\widehat{Popularity} = (46.84327861 + 10.38302918) - 7.33963458(Instrumentalness) - 20.96812717(Energy) + 1.44788261(Loudness) + 13.68405666(Danceability) + 6.28231307(Acousticness) - 4.12188004(Liveness) + 0.02403758(Tempo) - 2.32546662(Valence)$$
+
+# Playlist Generation: James
+
+```{r}
+#Idea: Since popularity is likeness of the masses, we can use regression line to predict most "popular" song that relates to the original song.
+
+playlist.create = function(givenID, n = 1, en = T, fullData = F, export = F, name = "playlist"){ #Takes track_id as string and desired playlist length int n
+  playList = songs %>%
+    filter(track_id == givenID) #selects all data on selected song
+  r = 1 #used for repetition
+  
+#----------Language----------#   
+# The function assumes English-only, unless specified genre is Latin.
+  
+  if(playList$playlist_genre[1] == "latin"){ #Making english-only exception for latin genre
+    en = F
+  }
+  if(en == T){ #removes songs containing letters outside the english alphabet; isn't perfect, but better than none. 1300 songs removed
+    songs = songs %>% 
+      mutate(track_name = iconv(track_name, from = "latin1", to = "ASCII")) %>%
+      filter(!is.na(track_name))
+  }
+  
+  while(r < n){
+    
+    #initialize song selection
+    givenSong = playList[r,]
+    
+#----------Error Handling----------#  
+    if((n%%1==0) == F){ #Checks that n is an integer
+      return("Please enter valid playlist length.")
+    }
+    if(nrow(givenSong) == 0){ #check that song is on list
+      return("Song not found.")
+    }
+    
+#----------Choosing Song----------#  
+# Idea: using the regression model, we can identify the most important factors. We can find the most similar of each category and use a random number generator on the most similar.
+    
+#-----X1: Genre-----#  
+    genreDF = songs %>% #genre is the most important factor, so it will go first.
+      filter(playlist_genre == givenSong$playlist_genre) %>%
+      filter(!track_id %in% playList$track_id) #removing any prior song
+    
+#-----X2: Instrumentalness-----#
+    if(givenSong[1,14] == 0){ #Needed if/else statements to avoid an error
+      tempDF = genreDF %>%
+        filter(genreDF[,14] == 0)
+    }
+    else{
+      similarity = data.frame(sim = numeric(nrow(genreDF)))
+      for(i in 1:nrow(similarity)){
+        similarity[i,] = abs(givenSong[1,14] - genreDF[i,14])
+      }
+      
+      tempDF = cbind(genreDF, similarity) %>% #selecting songs with bottom 50% closest
+        filter(sim < quantile(similarity[,1])[3]) %>%
+        select(-sim) #removing temp sim
+    }
+  
+#-----X3-X9: Everything Else-----#  
+    variableIndex = c(9, 11, 8, 13, 15, 17, 16) #energy, loudness, danceability, acousticness, liveness, tempo, valence
+    for(x in variableIndex){ #loop through remaining variables
+      similarity = data.frame(sim = numeric(nrow(tempDF))) 
+      for(i in 1:nrow(similarity)){
+        similarity[i,] = abs(givenSong[1,x] - tempDF[i,x])
+      }
+      
+      tempDF = cbind(tempDF, similarity) %>% #selecting songs with bottom 50% closest
+        filter(sim < quantile(similarity[,1])[3]) %>%
+        select(-sim) #removing temp sim
+    }
+    
+#-----Final Selection-----#   
+    playList[r+1,] = tempDF[sample(1:nrow(tempDF), 1),] #using a random number in order to obtain unique playlists.
+    r = r+1 #iteration
+  }
+  
+#-----Output-----#  
+  if(export == T){ #exports playlist to csv
+    write.csv(data.frame(song = playList$track_name, artist = playList$track_artist), paste0(name,".csv"), row.names = F)
+    return(cat("Playlist generated as ", name))
+  }
+  if(fullData == F){ #only returns track/artist
+    return(data.frame(song = playList$track_name, artist = playList$track_artist))
+  }else{
+    return(playList)
+  }
+}
+
+```
+
+```{r}
+library(dplyr)
+#demo
+playlist.create("7wBJfHzpfI3032CSD7CE2m", 20) #playlist - shortv
+playlist.create("7wBJfHzpfI3032CSD7CE2m", 20, fullData = T) #playlist - full
+
+
+#Export
+#https://www.tunemymusic.com/transfer/csv-to-spotify
+playlist.create("Insert Song ID", 20, export = T, name = "Output name")
+```
+
+
+#Testing: Julia and Zeina
+Goal: Use the validation dataset to test for accuracy. 
+
+Test the model, test the playlist
+
+Tests to run: 
+- obtain msr and mspr - if MSR and MSPR are relatively close, the model is good.
+-compare training and validation coefficients 
+- studentized deleted residuals: look for outliers
+- obtain cooks distance to determine if there are cases that have strong influence on the fitted values
+- DFFits and/or DFbeta? found in notes
+
+- look into interaction between/correlation for multicollinearity? 
+
+- generate new playlist using validation data and compare to a test using all the data. T-test? anova look at summary? Is it more accurate on different generes? 
+
+Idea: Find SSE, R^2, R^2 adjusted, Cp, BIC, sbc, aic, press, and pval for the model to show its accuracy. 
+
+#Creating validation model and comparing coefficients
+
+To investigate and test the model made using the step wise function, I first created a validation model using the validation data. I then compared the coefficients from each model to observe any under fitting or over fitting errors. From the data set most coefficients are fairly similar, but a few differences do stick out. The intercept, x1 r&b, x3, x2, x9, and x10 each have significant differences (+ or - 1.5 values) between training and validation models. 
+```{r}
+#validation model
+best.model.validation <- lm(y.validation~x1.validation+x8.validation+x3.validation+x5.validation+x2.validation+x7.validation+x9.validation+x11.validation+x10.validation)
+
+summary(best.model.validation)$coef
+
+#comparing coefficients
+coef<-data.frame(coefficients(best.model.training),coefficients(best.model.validation))
+
+diff<-data.frame(coefficients(best.model.training)-coefficients(best.model.validation))
+labels<-c("Differences")
+colnames(diff)<-labels
+names<-c("Intercept","x1.latin","x1.pop","x1.r&b","x1.rap","x1.rock","instrumentalness","energy","loudness","danceability","acousticness","liveness","tempo","valence")
+
+
+diff<-cbind(names,diff)
+ggplot(diff, aes(x=diff$names, y=diff$Differences)) +  geom_bar(stat = "identity", fill = "deepskyblue4", width = 0.7) +labs(title = "Comparing Coefficients", x = "Predictors",y = " Differences") 
+```
+#MSR and MSPR
+```{r}
+anova(best.model.training)
+MSE<-anova(best.model.training)$Mean[10]
+MSE
+
+Yi.hat<-predict(best.model.training, newdata=validation.data) #error when using validation data?
+# Yi? not sure how to calculate
+```
+
+```{r}
+#testing
+pvec = c()
+x = 50 #choose length of x
+exampleGenre = "rap" #choose genre
+
+for(i in 1:5){
+exampleSong = sample_n(songs %>%
+          filter(playlist_genre == exampleGenre) , 1)
+
+funcTest = playlist.create(exampleSong$track_id, x, fullData = T) #generates a playlist of length x
+
+exampleTest = sample_n(songs %>%
+                        filter(playlist_genre == exampleGenre) , x)
+
+#list of pvals
+pvec = append(pvec, t.test(funcTest$track_popularity, exampleTest$track_popularity)[3])
+}
+
+unlist(pvec) %>%
+  mean()
+```
+```{r}
+
+head(songs)
+
+```
+
+Create a generated playlist using a random song from a given category, preform a t-test comparing the created playlist to a random playlist of the same length with randomly chosen songs from the same genre. 
+
+Ho: the two playlists are the same in popularity levels
+
+Ha: Our created playlist has higher popularity ratings compared to the randomly generated playlist 
+
+
+```
