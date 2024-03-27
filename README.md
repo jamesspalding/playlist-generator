@@ -1,6 +1,10 @@
 # Playlist Generation
 
-https://www.kaggle.com/datasets/joebeachcapital/30000-spotify-songs
+[Data Source](https://www.kaggle.com/datasets/joebeachcapital/30000-spotify-songs)
+
+[Main Repository](https://github.com/jamesspalding/playlist-generator/)
+
+[Demo Video](https://github.com/jamesspalding/playlist-generator/blob/main/spotifyRDemo.mp4)
 
 ### An R function that uses multiple regression to generate Spotify playlists. 
 
